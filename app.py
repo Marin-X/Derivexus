@@ -122,22 +122,40 @@ html, body, [data-testid="stAppViewContainer"] {
     pointer-events: none;
 }
 .dx-header-content {
-    display: flex; align-items: center; gap: 1.5rem;
-    position: relative; z-index: 1;
+    display: flex;
+    align-items: center;
+    gap: 2.5rem;
+    position: relative;
+    z-index: 1;
+    min-width: 0;
 }
 .dx-logo {
     width: 64px; height: 64px;
     animation: logoFloat 4s ease-in-out infinite;
-    filter: drop-shadow(0 0 12px rgba(46, 204, 113, 0.3));
+    filter: drop-shadow(0 0 8px rgba(46, 204, 113, 0.25));
     flex-shrink: 0;
+}
+.dx-title-wrap {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    flex: 1;
 }
 .dx-title {
     font-family: 'Cormorant Garamond', serif;
     font-size: 3rem; font-weight: 700;
     color: var(--text-primary);
     letter-spacing: -0.02em; line-height: 1.1; margin: 0;
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 0.75rem;
 }
-.dx-title span {
+.dx-title-text {
+    display: inline-block;
+    white-space: nowrap;
+}
+.dx-title span.dx-gradient {
     background: linear-gradient(135deg, var(--emerald-500), var(--emerald-300));
     -webkit-background-clip: text; -webkit-text-fill-color: transparent;
     background-clip: text;
@@ -149,12 +167,13 @@ html, body, [data-testid="stAppViewContainer"] {
 }
 .dx-version {
     font-family: 'JetBrains Mono', monospace;
-    font-size: 0.65rem; color: var(--emerald-500);
+    font-size: 0.7rem; color: var(--emerald-500);
     background: rgba(46, 204, 113, 0.08);
     border: 1px solid rgba(46, 204, 113, 0.15);
-    padding: 0.15rem 0.5rem; border-radius: 4px;
-    margin-left: 0.75rem; letter-spacing: 0.05em;
-    vertical-align: super;
+    padding: 0.2rem 0.6rem; border-radius: 4px;
+    letter-spacing: 0.05em;
+    align-self: center;
+    flex-shrink: 0;
 }
 
 /* ═══ METRICS ═══ */
@@ -181,8 +200,10 @@ div[data-testid="stMetric"] label {
 }
 div[data-testid="stMetric"] [data-testid="stMetricValue"] {
     font-family: 'JetBrains Mono', monospace !important;
-    font-size: 1.6rem !important; font-weight: 600 !important;
+    font-size: 1.4rem !important; font-weight: 600 !important;
     color: var(--emerald-500) !important;
+    white-space: nowrap !important;
+    overflow: visible !important;
 }
 
 /* ═══ SIDEBAR ═══ */
@@ -303,6 +324,15 @@ blockquote {
     color: var(--emerald-500) !important;
     font-family: 'JetBrains Mono', monospace !important;
     font-size: 0.75rem !important; border-radius: 6px !important;
+}
+
+/* ═══ MOBILE ═══ */
+@media (max-width: 768px) {
+    .dx-header { padding: 1.5rem 1.5rem; }
+    .dx-header-content { gap: 1.25rem; flex-wrap: wrap; }
+    .dx-logo { width: 48px; height: 48px; }
+    .dx-title { font-size: 2rem; }
+    .dx-subtitle { font-size: 0.85rem; }
 }
 </style>
 """, unsafe_allow_html=True)
@@ -690,9 +720,9 @@ st.markdown("""
         <img src="https://marinxhemollari.com/frog-logo.svg"
              alt="Derivexus" class="dx-logo"
              onerror="this.style.display='none'">
-        <div>
+        <div class="dx-title-wrap">
             <div class="dx-title">
-                Derive<span>xus</span>
+                <span class="dx-title-text">Derive<span class="dx-gradient">xus</span></span>
                 <span class="dx-version">v1.0</span>
             </div>
             <div class="dx-subtitle">
