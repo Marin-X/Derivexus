@@ -144,20 +144,20 @@ html, body, [data-testid="stAppViewContainer"] {
 .dx-title {
     font-family: 'Cormorant Garamond', serif;
     font-size: 3rem; font-weight: 700;
-    color: var(--text-primary);
     letter-spacing: -0.02em; line-height: 1.1; margin: 0;
     display: flex;
     align-items: baseline;
     flex-wrap: wrap;
-    gap: 0.75rem;
+    gap: 0.25rem;
 }
-.dx-title-text {
-    display: inline-block;
-    white-space: nowrap;
+.dx-title-plain {
+    color: var(--text-primary);
 }
-.dx-title span.dx-gradient {
-    background: linear-gradient(135deg, var(--emerald-500), var(--emerald-300));
-    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+.dx-title-accent {
+    color: var(--emerald-500);
+    background: linear-gradient(135deg, #2ecc71 0%, #1abc9c 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
     background-clip: text;
 }
 .dx-subtitle {
@@ -174,6 +174,7 @@ html, body, [data-testid="stAppViewContainer"] {
     letter-spacing: 0.05em;
     align-self: center;
     flex-shrink: 0;
+    margin-left: 0.75rem;
 }
 
 /* ═══ METRICS ═══ */
@@ -259,7 +260,7 @@ h3, h4 { font-family: 'DM Sans', sans-serif !important; font-weight: 500 !import
     color: var(--emerald-500) !important;
 }
 
-/* ═══ STRATEGY LABELS ═══ */
+/* ═══ LABELS ═══ */
 .dx-label {
     font-family: 'DM Sans', sans-serif; font-size: 0.65rem; font-weight: 600;
     text-transform: uppercase; letter-spacing: 0.12em;
@@ -372,7 +373,7 @@ def greeks(S, K, T, r, sigma, option_type="call"):
     sqrt_T = np.sqrt(T)
 
     gamma = norm.pdf(d1_val) / (S * sigma * sqrt_T)
-    vega = S * norm.pdf(d1_val) * sqrt_T / 100  # per 1% move
+    vega = S * norm.pdf(d1_val) * sqrt_T / 100
 
     if option_type == "call":
         delta = norm.cdf(d1_val)
@@ -480,7 +481,6 @@ PLOT_LAYOUT = dict(
 
 def plot_payoff(S, K, premium_call, premium_put, option_type):
     s_range = np.linspace(S * 0.5, S * 1.5, 500)
-
     fig = go.Figure()
 
     if option_type in ["Call", "Both"]:
@@ -513,7 +513,6 @@ def plot_payoff(S, K, premium_call, premium_put, option_type):
 
 def plot_greeks_sensitivity(S, K, T, r, sigma):
     s_range = np.linspace(S * 0.5, S * 1.5, 300)
-
     greek_names = ["Delta", "Gamma", "Theta", "Vega"]
     greek_colors_call = [COLORS["delta"], COLORS["gamma"], COLORS["theta"], COLORS["vega"]]
 
@@ -630,7 +629,6 @@ def plot_iv_surface(iv_data):
 
 
 def plot_iv_heatmap(iv_data):
-    # Format strike labels cleanly
     strike_labels = [f"${s:.0f}" for s in iv_data["strikes"]]
 
     fig = go.Figure(data=go.Heatmap(
@@ -722,7 +720,7 @@ st.markdown("""
              onerror="this.style.display='none'">
         <div class="dx-title-wrap">
             <div class="dx-title">
-                <span class="dx-title-text">Derive<span class="dx-gradient">xus</span></span>
+                <span class="dx-title-plain">Derive</span><span class="dx-title-accent">xus</span>
                 <span class="dx-version">v1.0</span>
             </div>
             <div class="dx-subtitle">
@@ -748,7 +746,6 @@ if run_button or "dx_results" in st.session_state:
             st.stop()
 
         S = spot_price
-        # Let user pick an expiration for detailed analysis
         selected_expiry = st.selectbox(
             "Select expiration for pricing analysis",
             options=expirations[:12],
@@ -761,10 +758,7 @@ if run_button or "dx_results" in st.session_state:
             calls_df, puts_df = fetch_chain_for_expiry(ticker_for_iv, selected_expiry)
 
         if calls_df is not None and not calls_df.empty:
-            # Find ATM strike
             K = float(calls_df.iloc[(calls_df["strike"] - S).abs().argsort().iloc[0]]["strike"])
-
-            # Get mid price for IV estimation
             atm_call = calls_df[calls_df["strike"] == K].iloc[0]
             mid_price = (atm_call["bid"] + atm_call["ask"]) / 2 if atm_call["bid"] > 0 else atm_call["lastPrice"]
             sigma = implied_vol(mid_price, S, K, T, r, "call")
@@ -774,22 +768,17 @@ if run_button or "dx_results" in st.session_state:
             K = S
             sigma = 0.25
 
-    # ══════════ COMPUTE ══════════
     call_price = bs_call(S, K, T, r, sigma)
     put_price = bs_put(S, K, T, r, sigma)
     call_greeks = greeks(S, K, T, r, sigma, "call")
     put_greeks = greeks(S, K, T, r, sigma, "put")
 
-    # Put-Call Parity check
     parity_lhs = call_price - put_price
     parity_rhs = S - K * np.exp(-r * T)
     parity_diff = abs(parity_lhs - parity_rhs)
 
     st.session_state["dx_results"] = True
 
-    # ══════════ RESULTS ══════════
-
-    # ─── Pricing Summary ───
     st.markdown("## Option Pricing")
 
     info_cols = st.columns(4)
@@ -828,7 +817,6 @@ if run_button or "dx_results" in st.session_state:
 
     st.markdown("---")
 
-    # ─── Put-Call Parity ───
     st.markdown("### Put-Call Parity Verification")
     parity_cols = st.columns(3)
     parity_cols[0].metric("C − P", f"${parity_lhs:.4f}")
@@ -842,7 +830,6 @@ if run_button or "dx_results" in st.session_state:
 
     st.markdown("---")
 
-    # ─── Payoff Diagram ───
     if show_payoff:
         st.markdown("## Payoff at Expiration")
         st.markdown("> Shows profit or loss per contract at expiration across a range of underlying prices. "
@@ -851,7 +838,6 @@ if run_button or "dx_results" in st.session_state:
         st.plotly_chart(plot_payoff(S, K, call_price, put_price, "Both"), use_container_width=True)
         st.markdown("---")
 
-    # ─── Greeks Sensitivity ───
     if show_greeks_sens:
         st.markdown("## Greeks Sensitivity")
         st.markdown("> How each Greek changes as the underlying price moves. "
@@ -862,7 +848,6 @@ if run_button or "dx_results" in st.session_state:
         st.plotly_chart(plot_greeks_sensitivity(S, K, T, r, sigma), use_container_width=True)
         st.markdown("---")
 
-    # ─── Greeks vs Time ───
     if show_greeks_time:
         st.markdown("## Greeks vs Time Decay")
         st.markdown("> How each Greek evolves as expiration approaches (DTE = days to expiration). "
@@ -872,7 +857,6 @@ if run_button or "dx_results" in st.session_state:
         st.plotly_chart(plot_greeks_vs_time(S, K, T, r, sigma), use_container_width=True)
         st.markdown("---")
 
-    # ─── Price vs Vol ───
     if show_price_vol:
         st.markdown("## Price vs Volatility")
         st.markdown("> How option price changes with implied volatility (IV), holding all else constant. "
@@ -881,7 +865,6 @@ if run_button or "dx_results" in st.session_state:
         st.plotly_chart(plot_option_price_vs_vol(S, K, T, r), use_container_width=True)
         st.markdown("---")
 
-    # ─── IV Surface ───
     if show_iv_surface:
         st.markdown("## Implied Volatility Surface")
         st.markdown("> Maps implied volatility across **strike prices** (x-axis) and **DTE — days to expiration** (y-axis). "
@@ -891,7 +874,6 @@ if run_button or "dx_results" in st.session_state:
         if mode == "Market Data" and ticker_for_iv:
             with st.spinner("Building IV surface from market data..."):
                 try:
-                    # Use up to 6 expirations
                     exp_subset = expirations[:min(8, len(expirations))]
                     all_strikes = set()
                     chain_data = {}
@@ -899,7 +881,6 @@ if run_button or "dx_results" in st.session_state:
                     for exp in exp_subset:
                         c, p = fetch_chain_for_expiry(ticker_for_iv, exp)
                         if c is not None and not c.empty:
-                            # Filter strikes within reasonable range of spot
                             mask = (c["strike"] >= S * 0.85) & (c["strike"] <= S * 1.15) & (c["volume"] > 0)
                             filtered = c[mask]
                             if len(filtered) >= 3:
@@ -909,7 +890,6 @@ if run_button or "dx_results" in st.session_state:
                     if len(chain_data) >= 2:
                         strike_list = sorted(all_strikes)
 
-                        # Thin strikes to max ~20 for readable heatmap
                         if len(strike_list) > 20:
                             step = len(strike_list) // 20
                             strike_list = strike_list[::step]
@@ -933,9 +913,7 @@ if run_button or "dx_results" in st.session_state:
                                     row.append(None)
                             iv_matrix.append(row)
 
-                        # Convert to numpy, interpolate NaNs
                         iv_arr = np.array(iv_matrix, dtype=float)
-                        # Simple forward fill for missing values
                         for i in range(iv_arr.shape[0]):
                             mask_valid = ~np.isnan(iv_arr[i])
                             if mask_valid.sum() >= 2:
@@ -962,7 +940,6 @@ if run_button or "dx_results" in st.session_state:
                     st.warning(f"Could not build IV surface: {e}")
 
         else:
-            # Synthetic IV surface for manual mode
             st.markdown("> Synthetic IV surface — switch to **Market Data** mode for real implied volatilities.")
             strike_range = np.linspace(K * 0.85, K * 1.15, 15)
             dte_range = np.array([7, 14, 30, 60, 90, 120, 180])
@@ -972,9 +949,7 @@ if run_button or "dx_results" in st.session_state:
                 row = []
                 for strike in strike_range:
                     moneyness = np.log(S / strike)
-                    # Synthetic smile: higher IV for OTM options
                     smile = sigma * (1 + 0.3 * moneyness**2 + 0.05 * np.abs(moneyness))
-                    # Term structure: slightly lower IV for longer DTE
                     term = smile * (1 - 0.1 * np.log(dte / 30))
                     row.append(max(term, 0.05))
                 iv_matrix.append(row)
@@ -994,7 +969,6 @@ if run_button or "dx_results" in st.session_state:
 
         st.markdown("---")
 
-    # ─── Greeks Reference ───
     st.markdown("## Greeks Reference")
 
     greeks_ref = pd.DataFrame({
