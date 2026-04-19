@@ -2,7 +2,7 @@
 
 Options pricing and Greeks visualization engine built with Python and Streamlit. Implements the generalized Black-Scholes-Merton model (with continuous dividend yield) for European options, full Greeks analysis, implied volatility surface construction, and sensitivity charts.
 
-**[Live Demo →](https://derivexus-YOUR-URL.streamlit.app)**
+**[Live Demo →](https://derivexus-marinx.streamlit.app)**
 
 ---
 
