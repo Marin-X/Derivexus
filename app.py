@@ -3,23 +3,7 @@ Derivexus — Options Pricing, Greeks & Volatility Surface Analysis Engine
 Built by Marin Xhemollari | marinxhemollari.com
 
 v2.0 — Adds quadratic smile fitting and options mispricing scanner.
-
-Implements:
-- Generalized Black-Scholes-Merton pricing with continuous dividend yield
-- Full Greeks suite: Delta, Gamma, Theta, Vega, Rho
-- Greeks sensitivity analysis across underlying price range
-- Payoff & P&L diagrams at expiration
-- Implied Volatility solver (Brent's method)
-- IV Surface from live options chain data (yfinance)
-- Quadratic smile fitting per expiration (NEW)
-- Mispricing scanner — flags contracts with IV residuals > 2σ (NEW)
-- Fair-price reconstruction from fitted IV surface (NEW)
-- Put-Call Parity verification
-
-Notes:
-- Pricing assumes European exercise.
-- Dividend yield q is continuously compounded.
-- Smile fitting is an empirical diagnostic, not an arbitrage-free model.
+v2.0.1 — Dark-mode contrast boost for visible animations.
 """
 
 import streamlit as st
@@ -43,7 +27,7 @@ st.set_page_config(
 )
 
 # ──────────────────────────────────────────────────────────────
-# CSS
+# CSS — Charcoal / Emerald Theme (dark-mode-boosted)
 # ──────────────────────────────────────────────────────────────
 
 st.markdown("""
@@ -64,9 +48,9 @@ st.markdown("""
     --text-primary: #e8e8e8;
     --text-secondary: rgba(232, 232, 232, 0.6);
     --text-muted: rgba(232, 232, 232, 0.35);
-    --glass-bg: rgba(20, 20, 20, 0.6);
-    --glass-border: rgba(46, 204, 113, 0.12);
-    --glass-border-hover: rgba(46, 204, 113, 0.25);
+    --glass-bg: rgba(22, 22, 22, 0.7);
+    --glass-border: rgba(46, 204, 113, 0.22);
+    --glass-border-hover: rgba(46, 204, 113, 0.40);
     --call-color: #22c55e;
     --put-color: #ef4444;
 }
@@ -85,8 +69,16 @@ st.markdown("""
     to   { opacity: 1; }
 }
 @keyframes pulseGlow {
-    0%, 100% { box-shadow: 0 0 20px rgba(46, 204, 113, 0.08); }
-    50%      { box-shadow: 0 0 40px rgba(46, 204, 113, 0.18); }
+    0%, 100% { box-shadow: 0 0 24px rgba(46, 204, 113, 0.18); }
+    50%      { box-shadow: 0 0 48px rgba(46, 204, 113, 0.40); }
+}
+@keyframes shimmerSweep {
+    0%   { background-position: -150% center; }
+    100% { background-position: 250% center; }
+}
+@keyframes borderBreathe {
+    0%, 100% { border-color: rgba(46, 204, 113, 0.22); }
+    50%      { border-color: rgba(46, 204, 113, 0.42); }
 }
 @keyframes logoFloat {
     0%, 100% { transform: translateY(0px); }
@@ -110,35 +102,52 @@ html, body, [data-testid="stAppViewContainer"] {
 
 .dx-header {
     background: linear-gradient(135deg,
-        var(--charcoal-800) 0%, rgba(46, 204, 113, 0.06) 25%,
-        var(--charcoal-700) 50%, rgba(26, 188, 156, 0.06) 75%,
+        var(--charcoal-800) 0%, rgba(46, 204, 113, 0.22) 25%,
+        var(--charcoal-700) 50%, rgba(26, 188, 156, 0.22) 75%,
         var(--charcoal-800) 100%);
     background-size: 400% 400%;
-    animation: gradientShift 12s ease infinite, fadeInUp 0.8s ease-out;
-    border: 1px solid var(--glass-border);
+    animation: gradientShift 10s ease infinite,
+               fadeInUp 0.8s ease-out,
+               borderBreathe 6s ease-in-out infinite;
+    border: 1px solid rgba(46, 204, 113, 0.28);
     border-radius: 16px;
     padding: 2.5rem 3rem;
     margin-bottom: 2rem;
     position: relative; overflow: hidden;
+    box-shadow: 0 0 40px rgba(46, 204, 113, 0.15),
+                inset 0 1px 0 rgba(46, 204, 113, 0.10);
 }
 .dx-header::before {
     content: '';
     position: absolute; top: 0; left: 0; right: 0; bottom: 0;
-    background: radial-gradient(ellipse at 20% 50%, rgba(46, 204, 113, 0.04) 0%, transparent 70%);
+    background: radial-gradient(ellipse at 20% 50%, rgba(46, 204, 113, 0.14) 0%, transparent 65%);
     pointer-events: none;
+    z-index: 0;
+}
+.dx-header::after {
+    content: '';
+    position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+    background: linear-gradient(105deg,
+        transparent 40%,
+        rgba(46, 204, 113, 0.14) 50%,
+        transparent 60%);
+    background-size: 200% 100%;
+    animation: shimmerSweep 7s ease-in-out infinite;
+    pointer-events: none;
+    z-index: 0;
 }
 .dx-header-content {
     display: flex;
     align-items: center;
     gap: 2.5rem;
     position: relative;
-    z-index: 1;
+    z-index: 2;
     min-width: 0;
 }
 .dx-logo {
     width: 64px; height: 64px;
     animation: logoFloat 4s ease-in-out infinite;
-    filter: drop-shadow(0 0 8px rgba(46, 204, 113, 0.25));
+    filter: drop-shadow(0 0 14px rgba(46, 204, 113, 0.55));
     flex-shrink: 0;
 }
 .dx-title-wrap { display: flex; flex-direction: column; min-width: 0; flex: 1; }
@@ -155,6 +164,7 @@ html, body, [data-testid="stAppViewContainer"] {
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
+    text-shadow: 0 0 30px rgba(46, 204, 113, 0.3);
 }
 .dx-subtitle {
     font-family: 'DM Sans', sans-serif;
@@ -164,11 +174,12 @@ html, body, [data-testid="stAppViewContainer"] {
 .dx-version {
     font-family: 'JetBrains Mono', monospace;
     font-size: 0.7rem; color: var(--emerald-500);
-    background: rgba(46, 204, 113, 0.08);
-    border: 1px solid rgba(46, 204, 113, 0.15);
+    background: rgba(46, 204, 113, 0.12);
+    border: 1px solid rgba(46, 204, 113, 0.25);
     padding: 0.2rem 0.6rem; border-radius: 4px;
     letter-spacing: 0.05em;
     align-self: center; flex-shrink: 0; margin-left: 0.75rem;
+    box-shadow: 0 0 12px rgba(46, 204, 113, 0.15);
 }
 
 div[data-testid="stMetric"] {
@@ -182,9 +193,9 @@ div[data-testid="stMetric"] {
 }
 div[data-testid="stMetric"]:hover {
     border-color: var(--glass-border-hover) !important;
-    background: rgba(20, 20, 20, 0.8) !important;
+    background: rgba(26, 26, 26, 0.85) !important;
     transform: translateY(-2px);
-    box-shadow: 0 8px 32px rgba(46, 204, 113, 0.1);
+    box-shadow: 0 8px 32px rgba(46, 204, 113, 0.25);
 }
 div[data-testid="stMetric"] label {
     font-family: 'DM Sans', sans-serif !important;
@@ -198,11 +209,12 @@ div[data-testid="stMetric"] [data-testid="stMetricValue"] {
     color: var(--emerald-500) !important;
     white-space: nowrap !important;
     overflow: visible !important;
+    text-shadow: 0 0 20px rgba(46, 204, 113, 0.25);
 }
 
 section[data-testid="stSidebar"] {
     background: var(--charcoal-800) !important;
-    border-right: 1px solid rgba(46, 204, 113, 0.08) !important;
+    border-right: 1px solid rgba(46, 204, 113, 0.15) !important;
 }
 section[data-testid="stSidebar"] .stMarkdown h2,
 section[data-testid="stSidebar"] .stMarkdown h3 {
@@ -227,19 +239,19 @@ h3, h4 { font-family: 'DM Sans', sans-serif !important; font-weight: 500 !import
     font-weight: 600 !important; font-size: 0.85rem !important;
     letter-spacing: 0.06em !important; text-transform: uppercase !important;
     border: none !important; border-radius: 8px !important;
-    box-shadow: 0 4px 16px rgba(46, 204, 113, 0.2) !important;
+    box-shadow: 0 4px 20px rgba(46, 204, 113, 0.35) !important;
     transition: all 0.3s ease !important;
 }
 .stButton > button[kind="primary"]:hover,
 .stButton > button[data-testid="stBaseButton-primary"]:hover {
     transform: translateY(-1px) !important;
-    box-shadow: 0 6px 24px rgba(46, 204, 113, 0.35) !important;
+    box-shadow: 0 6px 28px rgba(46, 204, 113, 0.55) !important;
 }
 
 .stTabs [data-baseweb="tab-list"] {
     gap: 4px !important; background: var(--charcoal-700) !important;
     border-radius: 10px !important; padding: 4px !important;
-    border: 1px solid rgba(255,255,255,0.04);
+    border: 1px solid rgba(46, 204, 113, 0.12);
 }
 .stTabs [data-baseweb="tab"] {
     font-family: 'DM Sans', sans-serif !important;
@@ -248,8 +260,9 @@ h3, h4 { font-family: 'DM Sans', sans-serif !important; font-weight: 500 !import
     color: var(--text-secondary) !important;
 }
 .stTabs [aria-selected="true"] {
-    background: rgba(46, 204, 113, 0.1) !important;
+    background: rgba(46, 204, 113, 0.18) !important;
     color: var(--emerald-500) !important;
+    box-shadow: 0 0 16px rgba(46, 204, 113, 0.2);
 }
 
 .dx-label {
@@ -258,9 +271,9 @@ h3, h4 { font-family: 'DM Sans', sans-serif !important; font-weight: 500 !import
     padding: 0.25rem 0.65rem; border-radius: 4px;
     display: inline-block; margin-bottom: 0.5rem;
 }
-.dx-call { color: #22c55e; background: rgba(34,197,94,0.08); border: 1px solid rgba(34,197,94,0.2); }
-.dx-put { color: #ef4444; background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.2); }
-.dx-scanner { color: #a78bfa; background: rgba(167,139,250,0.08); border: 1px solid rgba(167,139,250,0.2); }
+.dx-call { color: #22c55e; background: rgba(34,197,94,0.12); border: 1px solid rgba(34,197,94,0.3); }
+.dx-put { color: #ef4444; background: rgba(239,68,68,0.12); border: 1px solid rgba(239,68,68,0.3); }
+.dx-scanner { color: #a78bfa; background: rgba(167,139,250,0.12); border: 1px solid rgba(167,139,250,0.3); }
 
 [data-testid="stPlotlyChart"] {
     border: 1px solid var(--glass-border); border-radius: 12px;
@@ -269,21 +282,22 @@ h3, h4 { font-family: 'DM Sans', sans-serif !important; font-weight: 500 !import
 }
 [data-testid="stPlotlyChart"]:hover {
     border-color: var(--glass-border-hover);
-    box-shadow: 0 4px 24px rgba(46, 204, 113, 0.06);
+    box-shadow: 0 4px 32px rgba(46, 204, 113, 0.15);
 }
 
 hr {
     border: none !important; height: 1px !important;
-    background: linear-gradient(90deg, transparent, rgba(46,204,113,0.15), transparent) !important;
+    background: linear-gradient(90deg, transparent, rgba(46,204,113,0.30), transparent) !important;
     margin: 2rem 0 !important;
 }
 
 blockquote {
     border-left: 3px solid var(--emerald-500) !important;
-    background: rgba(46,204,113,0.03) !important;
+    background: rgba(46,204,113,0.06) !important;
     padding: 0.8rem 1.2rem !important; border-radius: 0 8px 8px 0 !important;
     font-family: 'DM Sans', sans-serif !important; font-size: 0.88rem !important;
     color: var(--text-secondary) !important;
+    box-shadow: 0 0 16px rgba(46, 204, 113, 0.08);
 }
 
 [data-testid="stDataFrame"] {
@@ -305,8 +319,8 @@ blockquote {
 }
 
 [data-testid="stMultiSelect"] span[data-baseweb="tag"] {
-    background: rgba(46,204,113,0.1) !important;
-    border: 1px solid rgba(46,204,113,0.2) !important;
+    background: rgba(46,204,113,0.15) !important;
+    border: 1px solid rgba(46,204,113,0.3) !important;
     color: var(--emerald-500) !important;
     font-family: 'JetBrains Mono', monospace !important;
     font-size: 0.75rem !important; border-radius: 6px !important;
@@ -389,38 +403,23 @@ def implied_vol(market_price, S, K, T, r, option_type="call", q=0.0):
 # ──────────────────────────────────────────────────────────────
 
 def fit_quadratic_smile(log_moneyness, iv_values):
-    """
-    Fit a quadratic polynomial σ(k) = a + b·k + c·k² to a single expiration's smile,
-    where k = ln(K/F) is log-moneyness (F = forward = S·e^((r-q)T)).
-
-    Returns:
-        coeffs: array [a, b, c]
-        fitted: fitted IV values at each input k
-        r_squared: goodness-of-fit
-        residuals: market IV - fitted IV at each input
-    """
     k = np.asarray(log_moneyness, dtype=float)
     iv = np.asarray(iv_values, dtype=float)
 
-    # Filter out non-finite values
     mask = np.isfinite(k) & np.isfinite(iv) & (iv > 0)
     if mask.sum() < 4:
         return None
     k_ = k[mask]
     iv_ = iv[mask]
 
-    # Fit σ(k) = a + b·k + c·k²  (equivalent to np.polyfit with deg=2)
-    coeffs = np.polyfit(k_, iv_, 2)  # returns [c, b, a] in descending power
-    # Rearrange to [a, b, c] in ascending power
+    coeffs = np.polyfit(k_, iv_, 2)
     a = coeffs[2]
     b = coeffs[1]
     c = coeffs[0]
 
-    fitted = a + b * k + c * k**2  # evaluate at ALL k, even those we masked, for residuals
+    fitted = a + b * k + c * k**2
+    residuals = iv - fitted
 
-    residuals = iv - fitted  # NaN where iv was NaN; acceptable
-
-    # R² on the fit sample
     iv_mean = iv_.mean()
     ss_res = np.sum((iv_ - (a + b * k_ + c * k_**2))**2)
     ss_tot = np.sum((iv_ - iv_mean)**2)
@@ -438,17 +437,6 @@ def fit_quadratic_smile(log_moneyness, iv_values):
 def build_mispricing_scan(ticker, S, r, q, expirations, max_expiries=6,
                            strike_range_pct=0.15, zscore_threshold=2.0,
                            fetch_chain_fn=None):
-    """
-    For each expiration:
-      1) Pull call chain
-      2) Compute mid prices and market IVs
-      3) Fit quadratic smile in log-moneyness space
-      4) Compute residual z-scores
-      5) Flag contracts where |z| > threshold as potentially mispriced
-      6) Compute theoretical "fair" price using fitted IV
-
-    Returns a tidy DataFrame with flagged contracts, sorted by |z| descending.
-    """
     exp_subset = expirations[:max_expiries]
     flagged_rows = []
     fit_by_expiry = {}
@@ -462,7 +450,6 @@ def build_mispricing_scan(ticker, S, r, q, expirations, max_expiries=6,
         if calls is None or calls.empty:
             continue
 
-        # Filter: only strikes within ±strike_range_pct of spot, positive volume
         mask = ((calls["strike"] >= S * (1 - strike_range_pct)) &
                 (calls["strike"] <= S * (1 + strike_range_pct)) &
                 (calls["volume"] > 0))
@@ -470,15 +457,13 @@ def build_mispricing_scan(ticker, S, r, q, expirations, max_expiries=6,
         if len(df) < 5:
             continue
 
-        # Mid price
         df["mid"] = np.where(df["bid"] > 0,
                              (df["bid"] + df["ask"]) / 2,
                              df["lastPrice"])
-        df = df[df["mid"] > 0.05]  # filter tiny premiums (unreliable IV)
+        df = df[df["mid"] > 0.05]
         if len(df) < 5:
             continue
 
-        # Compute IV and log-moneyness
         df["iv_market"] = [
             implied_vol(row["mid"], S, row["strike"], T, r, "call", q)
             for _, row in df.iterrows()
@@ -488,7 +473,6 @@ def build_mispricing_scan(ticker, S, r, q, expirations, max_expiries=6,
         if len(df) < 5:
             continue
 
-        # Fit smile
         fit = fit_quadratic_smile(df["log_moneyness"].values, df["iv_market"].values)
         if fit is None:
             continue
@@ -507,7 +491,6 @@ def build_mispricing_scan(ticker, S, r, q, expirations, max_expiries=6,
             "n_fit": fit["n_fit"],
         }
 
-        # Z-score of residuals within this expiration
         resid = fit["residuals"]
         resid_std = np.nanstd(resid)
         if resid_std == 0 or np.isnan(resid_std):
@@ -595,7 +578,7 @@ COLORS = {
     "vega": "#3b82f6",
     "rho": "#ec4899",
     "bg": "rgba(0,0,0,0)",
-    "grid": "rgba(46, 204, 113, 0.06)",
+    "grid": "rgba(46, 204, 113, 0.08)",
     "text": "rgba(232, 232, 232, 0.6)",
     "text_bright": "rgba(232, 232, 232, 0.85)",
     "fitted": "#1abc9c",
@@ -609,10 +592,10 @@ PLOT_LAYOUT = dict(
     font=dict(color=COLORS["text"], size=12, family="DM Sans, sans-serif"),
     margin=dict(l=48, r=24, t=56, b=72),
     xaxis=dict(gridcolor=COLORS["grid"], zeroline=False,
-               linecolor="rgba(46,204,113,0.1)",
+               linecolor="rgba(46,204,113,0.15)",
                tickfont=dict(family="JetBrains Mono, monospace", size=10)),
     yaxis=dict(gridcolor=COLORS["grid"], zeroline=False,
-               linecolor="rgba(46,204,113,0.1)",
+               linecolor="rgba(46,204,113,0.15)",
                tickfont=dict(family="JetBrains Mono, monospace", size=10)),
     title_font=dict(family="DM Sans, sans-serif", size=16, color=COLORS["text_bright"]),
     hoverlabel=dict(bgcolor="rgba(14,14,14,0.95)", bordercolor="rgba(46,204,113,0.3)",
@@ -795,27 +778,20 @@ def plot_option_price_vs_vol(S, K, T, r, q):
 
 
 def plot_smile_fit(fit_data, expiry_label):
-    """
-    Plot market IV points + fitted quadratic smile + residuals panel for a single expiration.
-    """
     fig = make_subplots(rows=2, cols=1, shared_xaxes=True,
                         vertical_spacing=0.08, row_heights=[0.7, 0.3],
                         subplot_titles=(f"IV Smile — {expiry_label} ({fit_data['dte']} DTE)",
                                         "Residuals (Market IV − Fitted IV)"))
 
-    # Sort by log-moneyness for a clean fitted line
     order = np.argsort(fit_data["log_moneyness"])
     k_sorted = fit_data["log_moneyness"][order]
     iv_sorted = fit_data["iv_market"][order]
-    fitted_sorted = fit_data["fitted"][order]
     residuals_sorted = fit_data["residuals"][order]
 
-    # Smooth fitted curve (evaluate on a dense grid)
     k_dense = np.linspace(k_sorted.min(), k_sorted.max(), 200)
     a, b, c = fit_data["coeffs"]
     fitted_dense = a + b * k_dense + c * k_dense**2
 
-    # Top panel — smile
     fig.add_trace(go.Scatter(x=k_sorted, y=iv_sorted * 100, mode="markers",
                              name="Market IV",
                              marker=dict(size=8, color=COLORS["call"],
@@ -826,7 +802,6 @@ def plot_smile_fit(fit_data, expiry_label):
                              line=dict(color=COLORS["fitted"], width=2.5)),
                   row=1, col=1)
 
-    # Bottom panel — residuals
     resid_pct = residuals_sorted * 100
     colors_r = [COLORS["flag_over"] if r > 0 else COLORS["flag_under"] for r in resid_pct]
     fig.add_trace(go.Bar(x=k_sorted, y=resid_pct, name="Residual",
@@ -850,7 +825,6 @@ def plot_smile_fit(fit_data, expiry_label):
     fig.update_yaxes(title_text="Resid (pp)", gridcolor=COLORS["grid"], zeroline=False,
                      tickfont=dict(family="JetBrains Mono", size=10), row=2, col=1)
 
-    # Add R² annotation
     fig.add_annotation(xref="paper", yref="paper", x=0.02, y=0.95,
                        text=f"R² = {fit_data['r_squared']*100:.1f}% · n = {fit_data['n_fit']}",
                        showarrow=False,
@@ -863,7 +837,6 @@ def plot_smile_fit(fit_data, expiry_label):
 
 
 def plot_mispricing_scatter(scan_df):
-    """Scatter: Moneyness vs Z-score, colored by flag, sized by volume."""
     if scan_df.empty:
         return None
     df = scan_df.copy()
@@ -871,12 +844,10 @@ def plot_mispricing_scatter(scan_df):
     df["color"] = df["Z-Score"].apply(
         lambda z: COLORS["flag_over"] if z > 2 else (COLORS["flag_under"] if z < -2 else "#64748b")
     )
-    # Size by volume (clamped)
     vol_clamp = np.clip(df["Volume"].fillna(1).astype(float), 1, 5000)
     df["marker_size"] = 6 + np.log1p(vol_clamp) * 2
 
     fig = go.Figure()
-    # Non-flagged
     non_flag = df[~df["Flagged"]]
     flag = df[df["Flagged"]]
 
@@ -900,7 +871,7 @@ def plot_mispricing_scatter(scan_df):
         x=flag["Moneyness"], y=flag["Z-Score"], mode="markers",
         marker=dict(size=flag["marker_size"], color=flag["color"],
                     line=dict(width=1, color="white")),
-        name=f"Flagged (|z| > 2)",
+        name="Flagged (|z| > 2)",
         customdata=np.stack([flag["Expiry"], flag["Strike"],
                              flag["Market IV"] * 100, flag["Fitted IV"] * 100,
                              flag["Mispricing %"]], axis=-1),
@@ -1047,7 +1018,6 @@ if run_button or "dx_results" in st.session_state:
             K = S
             sigma = 0.25
 
-    # ══════════ COMPUTE ══════════
     call_price = bs_call(S, K, T, r, sigma, q)
     put_price = bs_put(S, K, T, r, sigma, q)
     call_greeks = greeks(S, K, T, r, sigma, "call", q)
@@ -1058,7 +1028,6 @@ if run_button or "dx_results" in st.session_state:
 
     st.session_state["dx_results"] = True
 
-    # ══════════ PRICING SUMMARY ══════════
     st.markdown("## Option Pricing")
     info_cols = st.columns(5)
     info_cols[0].metric("Spot Price", f"${S:.2f}")
@@ -1130,7 +1099,6 @@ if run_button or "dx_results" in st.session_state:
         st.plotly_chart(plot_option_price_vs_vol(S, K, T, r, q), use_container_width=True)
         st.markdown("---")
 
-    # ═══ IV SURFACE ═══
     if show_iv_surface:
         st.markdown("## Implied Volatility Surface")
         st.markdown("> Maps IV across strike and days-to-expiration. Shows smile/skew and term structure.")
@@ -1220,7 +1188,6 @@ if run_button or "dx_results" in st.session_state:
                 st.plotly_chart(plot_iv_heatmap(iv_data), use_container_width=True)
         st.markdown("---")
 
-    # ═══ SMILE FITTING & MISPRICING SCANNER (v2.0) ═══
     if show_scanner:
         st.markdown('<div class="dx-label dx-scanner">V2.0 — VOLATILITY SMILE DIAGNOSTICS</div>',
                     unsafe_allow_html=True)
@@ -1257,7 +1224,6 @@ if run_button or "dx_results" in st.session_state:
                 st.warning("Could not build smile fits for this ticker. Try a more liquid ticker "
                            "(SPY, QQQ, AAPL, TSLA) or widen the strike range.")
             else:
-                # Summary metrics
                 total_contracts = len(scan_df)
                 flagged = scan_df[scan_df["Flagged"]]
                 n_flagged = len(flagged)
@@ -1277,7 +1243,6 @@ if run_button or "dx_results" in st.session_state:
                     st.plotly_chart(scatter_fig, use_container_width=True)
 
                 st.markdown("### Per-Expiration Smile Fits")
-                # Select expiration to deep-dive
                 exp_options = list(fit_by_expiry.keys())
                 selected_fit_exp = st.selectbox(
                     "Inspect smile fit for expiration:",
@@ -1287,7 +1252,6 @@ if run_button or "dx_results" in st.session_state:
                 st.plotly_chart(plot_smile_fit(fit_by_expiry[selected_fit_exp], selected_fit_exp),
                                 use_container_width=True)
 
-                # Flagged contracts table
                 st.markdown("### Flagged Contracts")
                 if n_flagged == 0:
                     st.info(f"No contracts exceeded the |z| > {z_threshold:.1f} threshold. Try lowering the threshold.")
@@ -1296,7 +1260,6 @@ if run_button or "dx_results" in st.session_state:
                     display_flagged["Direction"] = np.where(
                         display_flagged["Z-Score"] > 0, "OVERPRICED", "UNDERPRICED"
                     )
-                    # Format
                     fmt_df = pd.DataFrame({
                         "Expiry": display_flagged["Expiry"],
                         "DTE": display_flagged["DTE"],
@@ -1323,7 +1286,6 @@ if run_button or "dx_results" in st.session_state:
                     )
         st.markdown("---")
 
-    # ═══ GREEKS REFERENCE ═══
     st.markdown("## Greeks Reference")
     greeks_ref = pd.DataFrame({
         "Greek": ["Delta (Δ)", "Gamma (Γ)", "Theta (Θ)", "Vega (ν)", "Rho (ρ)"],
@@ -1343,15 +1305,11 @@ if run_button or "dx_results" in st.session_state:
         "Gamma is highest for ATM options near expiration. Theta accelerates as expiration approaches."
     )
 
-# ──────────────────────────────────────────────────────────────
-# FOOTER
-# ──────────────────────────────────────────────────────────────
-
 st.markdown("---")
 st.markdown("""
 <div class="dx-footer">
     Built by <a href="https://marinxhemollari.com" target="_blank">Marin Xhemollari</a> ·
     Black-Scholes-Merton · Quadratic Smile Fitting · Mispricing Scanner
-    <div class="dx-footer-mono">derivexus v2.0 · scipy.stats.norm · brentq solver · np.polyfit · plotly.js</div>
+    <div class="dx-footer-mono">derivexus v2.0.1 · scipy.stats.norm · brentq solver · np.polyfit · plotly.js</div>
 </div>
 """, unsafe_allow_html=True)
