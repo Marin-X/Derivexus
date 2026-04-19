@@ -28,7 +28,7 @@ warnings.filterwarnings("ignore")
 
 st.set_page_config(
     page_title="Derivexus",
-    page_icon="🐸",
+    page_icon="https://marinxhemollari.com/frog-favicon.svg",
     layout="wide",
     initial_sidebar_state="expanded",
 )
