@@ -3,7 +3,7 @@ Derivexus — Options Pricing & Greeks Visualization Engine
 Built by Marin Xhemollari | marinxhemollari.com
 
 Implements:
-- Black-Scholes pricing for European calls and puts
+- Generalized Black-Scholes-Merton pricing with continuous dividend yield
 - Full Greeks suite: Delta, Gamma, Theta, Vega, Rho
 - Greeks sensitivity analysis across underlying price range
 - Payoff & P&L diagrams at expiration
@@ -11,6 +11,10 @@ Implements:
 - IV Surface from live options chain data (yfinance)
 - Greeks heatmaps across strike × expiry
 - Put-Call Parity verification
+
+Notes:
+- Pricing assumes European exercise.
+- Dividend yield q is continuously compounded.
 """
 
 import streamlit as st
@@ -34,7 +38,7 @@ st.set_page_config(
 )
 
 # ──────────────────────────────────────────────────────────────
-# PREMIUM CSS — Charcoal / Emerald Theme
+# CSS
 # ──────────────────────────────────────────────────────────────
 
 st.markdown("""
@@ -101,7 +105,6 @@ html, body, [data-testid="stAppViewContainer"] {
 ::-webkit-scrollbar-thumb { background: var(--charcoal-400); border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--emerald-400); }
 
-/* ═══ HEADER ═══ */
 .dx-header {
     background: linear-gradient(135deg,
         var(--charcoal-800) 0%, rgba(46, 204, 113, 0.06) 25%,
@@ -150,9 +153,7 @@ html, body, [data-testid="stAppViewContainer"] {
     flex-wrap: wrap;
     gap: 0.25rem;
 }
-.dx-title-plain {
-    color: var(--text-primary);
-}
+.dx-title-plain { color: var(--text-primary); }
 .dx-title-accent {
     color: var(--emerald-500);
     background: linear-gradient(135deg, #2ecc71 0%, #1abc9c 100%);
@@ -177,7 +178,6 @@ html, body, [data-testid="stAppViewContainer"] {
     margin-left: 0.75rem;
 }
 
-/* ═══ METRICS ═══ */
 div[data-testid="stMetric"] {
     background: var(--glass-bg) !important;
     backdrop-filter: blur(16px);
@@ -207,7 +207,6 @@ div[data-testid="stMetric"] [data-testid="stMetricValue"] {
     overflow: visible !important;
 }
 
-/* ═══ SIDEBAR ═══ */
 section[data-testid="stSidebar"] {
     background: var(--charcoal-800) !important;
     border-right: 1px solid rgba(46, 204, 113, 0.08) !important;
@@ -220,12 +219,10 @@ section[data-testid="stSidebar"] .stMarkdown h3 {
     color: var(--text-muted) !important; margin-top: 1.5rem !important;
 }
 
-/* ═══ HEADINGS ═══ */
 h2 { font-family: 'Cormorant Garamond', serif !important;
      font-weight: 600 !important; animation: fadeInUp 0.6s ease-out; }
 h3, h4 { font-family: 'DM Sans', sans-serif !important; font-weight: 500 !important; }
 
-/* ═══ BUTTONS ═══ */
 .stButton > button[kind="primary"],
 .stButton > button[data-testid="stBaseButton-primary"] {
     background: linear-gradient(135deg, var(--emerald-400), var(--emerald-300)) !important;
@@ -243,7 +240,6 @@ h3, h4 { font-family: 'DM Sans', sans-serif !important; font-weight: 500 !import
     box-shadow: 0 6px 24px rgba(46, 204, 113, 0.35) !important;
 }
 
-/* ═══ TABS ═══ */
 .stTabs [data-baseweb="tab-list"] {
     gap: 4px !important; background: var(--charcoal-700) !important;
     border-radius: 10px !important; padding: 4px !important;
@@ -260,7 +256,6 @@ h3, h4 { font-family: 'DM Sans', sans-serif !important; font-weight: 500 !import
     color: var(--emerald-500) !important;
 }
 
-/* ═══ LABELS ═══ */
 .dx-label {
     font-family: 'DM Sans', sans-serif; font-size: 0.65rem; font-weight: 600;
     text-transform: uppercase; letter-spacing: 0.12em;
@@ -271,7 +266,6 @@ h3, h4 { font-family: 'DM Sans', sans-serif !important; font-weight: 500 !import
 .dx-put { color: #ef4444; background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.2); }
 .dx-greek { color: #a78bfa; background: rgba(167,139,250,0.08); border: 1px solid rgba(167,139,250,0.2); }
 
-/* ═══ CHARTS ═══ */
 [data-testid="stPlotlyChart"] {
     border: 1px solid var(--glass-border); border-radius: 12px;
     overflow: hidden; animation: fadeIn 0.5s ease-out;
@@ -282,14 +276,12 @@ h3, h4 { font-family: 'DM Sans', sans-serif !important; font-weight: 500 !import
     box-shadow: 0 4px 24px rgba(46, 204, 113, 0.06);
 }
 
-/* ═══ DIVIDERS ═══ */
 hr {
     border: none !important; height: 1px !important;
     background: linear-gradient(90deg, transparent, rgba(46,204,113,0.15), transparent) !important;
     margin: 2rem 0 !important;
 }
 
-/* ═══ BLOCKQUOTE ═══ */
 blockquote {
     border-left: 3px solid var(--emerald-500) !important;
     background: rgba(46,204,113,0.03) !important;
@@ -298,14 +290,12 @@ blockquote {
     color: var(--text-secondary) !important;
 }
 
-/* ═══ DATAFRAMES ═══ */
 [data-testid="stDataFrame"] {
     border: 1px solid var(--glass-border) !important;
     border-radius: 10px !important; overflow: hidden;
     animation: fadeIn 0.5s ease-out;
 }
 
-/* ═══ FOOTER ═══ */
 .dx-footer {
     text-align: center; color: var(--text-muted);
     font-family: 'DM Sans', sans-serif; font-size: 0.78rem;
@@ -318,7 +308,6 @@ blockquote {
     color: var(--text-muted); opacity: 0.6; margin-top: 0.5rem;
 }
 
-/* ═══ MULTISELECT ═══ */
 [data-testid="stMultiSelect"] span[data-baseweb="tag"] {
     background: rgba(46,204,113,0.1) !important;
     border: 1px solid rgba(46,204,113,0.2) !important;
@@ -327,7 +316,6 @@ blockquote {
     font-size: 0.75rem !important; border-radius: 6px !important;
 }
 
-/* ═══ MOBILE ═══ */
 @media (max-width: 768px) {
     .dx-header { padding: 1.5rem 1.5rem; }
     .dx-header-content { gap: 1.25rem; flex-wrap: wrap; }
@@ -340,50 +328,61 @@ blockquote {
 
 
 # ──────────────────────────────────────────────────────────────
-# BLACK-SCHOLES MATH
+# GENERALIZED BLACK-SCHOLES-MERTON MATH (with continuous dividend yield q)
 # ──────────────────────────────────────────────────────────────
 
-def d1(S, K, T, r, sigma):
-    return (np.log(S / K) + (r + 0.5 * sigma**2) * T) / (sigma * np.sqrt(T))
+def d1(S, K, T, r, sigma, q=0.0):
+    return (np.log(S / K) + (r - q + 0.5 * sigma**2) * T) / (sigma * np.sqrt(T))
 
-def d2(S, K, T, r, sigma):
-    return d1(S, K, T, r, sigma) - sigma * np.sqrt(T)
+def d2(S, K, T, r, sigma, q=0.0):
+    return d1(S, K, T, r, sigma, q) - sigma * np.sqrt(T)
 
-def bs_call(S, K, T, r, sigma):
+def bs_call(S, K, T, r, sigma, q=0.0):
     if T <= 0 or sigma <= 0:
         return max(S - K, 0)
-    return S * norm.cdf(d1(S, K, T, r, sigma)) - K * np.exp(-r * T) * norm.cdf(d2(S, K, T, r, sigma))
+    d1v = d1(S, K, T, r, sigma, q)
+    d2v = d2(S, K, T, r, sigma, q)
+    return S * np.exp(-q * T) * norm.cdf(d1v) - K * np.exp(-r * T) * norm.cdf(d2v)
 
-def bs_put(S, K, T, r, sigma):
+def bs_put(S, K, T, r, sigma, q=0.0):
     if T <= 0 or sigma <= 0:
         return max(K - S, 0)
-    return K * np.exp(-r * T) * norm.cdf(-d2(S, K, T, r, sigma)) - S * norm.cdf(-d1(S, K, T, r, sigma))
+    d1v = d1(S, K, T, r, sigma, q)
+    d2v = d2(S, K, T, r, sigma, q)
+    return K * np.exp(-r * T) * norm.cdf(-d2v) - S * np.exp(-q * T) * norm.cdf(-d1v)
 
 
 # ──────────────────────────────────────────────────────────────
-# GREEKS
+# GREEKS (generalized Black-Scholes-Merton)
 # ──────────────────────────────────────────────────────────────
 
-def greeks(S, K, T, r, sigma, option_type="call"):
+def greeks(S, K, T, r, sigma, option_type="call", q=0.0):
     if T <= 0 or sigma <= 0:
         return {"Delta": 0, "Gamma": 0, "Theta": 0, "Vega": 0, "Rho": 0}
 
-    d1_val = d1(S, K, T, r, sigma)
-    d2_val = d2(S, K, T, r, sigma)
+    d1_val = d1(S, K, T, r, sigma, q)
+    d2_val = d2(S, K, T, r, sigma, q)
     sqrt_T = np.sqrt(T)
 
-    gamma = norm.pdf(d1_val) / (S * sigma * sqrt_T)
-    vega = S * norm.pdf(d1_val) * sqrt_T / 100
+    # Gamma and Vega are same for calls and puts (under BSM)
+    gamma = np.exp(-q * T) * norm.pdf(d1_val) / (S * sigma * sqrt_T)
+    vega = S * np.exp(-q * T) * norm.pdf(d1_val) * sqrt_T / 100  # per 1% vol change
 
     if option_type == "call":
-        delta = norm.cdf(d1_val)
-        theta = (-(S * norm.pdf(d1_val) * sigma) / (2 * sqrt_T)
-                 - r * K * np.exp(-r * T) * norm.cdf(d2_val)) / 365
-        rho = K * T * np.exp(-r * T) * norm.cdf(d2_val) / 100
+        delta = np.exp(-q * T) * norm.cdf(d1_val)
+        theta = (
+            -(S * np.exp(-q * T) * norm.pdf(d1_val) * sigma) / (2 * sqrt_T)
+            - r * K * np.exp(-r * T) * norm.cdf(d2_val)
+            + q * S * np.exp(-q * T) * norm.cdf(d1_val)
+        ) / 365  # per calendar day
+        rho = K * T * np.exp(-r * T) * norm.cdf(d2_val) / 100  # per 1% rate change
     else:
-        delta = norm.cdf(d1_val) - 1
-        theta = (-(S * norm.pdf(d1_val) * sigma) / (2 * sqrt_T)
-                 + r * K * np.exp(-r * T) * norm.cdf(-d2_val)) / 365
+        delta = -np.exp(-q * T) * norm.cdf(-d1_val)
+        theta = (
+            -(S * np.exp(-q * T) * norm.pdf(d1_val) * sigma) / (2 * sqrt_T)
+            + r * K * np.exp(-r * T) * norm.cdf(-d2_val)
+            - q * S * np.exp(-q * T) * norm.cdf(-d1_val)
+        ) / 365
         rho = -K * T * np.exp(-r * T) * norm.cdf(-d2_val) / 100
 
     return {
@@ -399,12 +398,15 @@ def greeks(S, K, T, r, sigma, option_type="call"):
 # IMPLIED VOLATILITY SOLVER
 # ──────────────────────────────────────────────────────────────
 
-def implied_vol(market_price, S, K, T, r, option_type="call"):
+def implied_vol(market_price, S, K, T, r, option_type="call", q=0.0):
     if T <= 0:
         return np.nan
     try:
         func = bs_call if option_type == "call" else bs_put
-        iv = brentq(lambda sigma: func(S, K, T, r, sigma) - market_price, 0.001, 5.0, maxiter=200)
+        iv = brentq(
+            lambda sigma: func(S, K, T, r, sigma, q) - market_price,
+            0.001, 5.0, maxiter=200
+        )
         return iv
     except (ValueError, RuntimeError):
         return np.nan
@@ -418,16 +420,25 @@ def implied_vol(market_price, S, K, T, r, option_type="call"):
 def fetch_options_chain(ticker):
     try:
         tk = yf.Ticker(ticker)
-        spot = tk.info.get("regularMarketPrice") or tk.info.get("currentPrice")
+        info = tk.info
+        spot = info.get("regularMarketPrice") or info.get("currentPrice")
         if spot is None:
             hist = tk.history(period="1d")
             spot = float(hist["Close"].iloc[-1]) if not hist.empty else None
+        # Pull continuous dividend yield if available
+        div_yield = info.get("dividendYield") or 0.0
+        if div_yield is None:
+            div_yield = 0.0
+        # yfinance returns dividendYield as a decimal (e.g. 0.015 = 1.5%)
+        # Some tickers return it as % — cap it to a sane range
+        if div_yield > 1.0:
+            div_yield = div_yield / 100.0
         expirations = list(tk.options)
         if not expirations or spot is None:
-            return None, None
-        return float(spot), expirations
+            return None, None, 0.0
+        return float(spot), expirations, float(div_yield)
     except Exception:
-        return None, None
+        return None, None, 0.0
 
 
 @st.cache_data(ttl=3600, show_spinner=False)
@@ -476,25 +487,22 @@ PLOT_LAYOUT = dict(
 
 
 # ──────────────────────────────────────────────────────────────
-# PLOTTING FUNCTIONS
+# PLOTTING
 # ──────────────────────────────────────────────────────────────
 
 def plot_payoff(S, K, premium_call, premium_put, option_type):
     s_range = np.linspace(S * 0.5, S * 1.5, 500)
     fig = go.Figure()
-
     if option_type in ["Call", "Both"]:
         intrinsic_call = np.maximum(s_range - K, 0)
         pnl_call = intrinsic_call - premium_call
         fig.add_trace(go.Scatter(x=s_range, y=pnl_call, mode="lines",
                                  name="Call P&L", line=dict(color=COLORS["call"], width=2.5)))
-
     if option_type in ["Put", "Both"]:
         intrinsic_put = np.maximum(K - s_range, 0)
         pnl_put = intrinsic_put - premium_put
         fig.add_trace(go.Scatter(x=s_range, y=pnl_put, mode="lines",
                                  name="Put P&L", line=dict(color=COLORS["put"], width=2.5)))
-
     fig.add_hline(y=0, line_dash="dash", line_color="rgba(232,232,232,0.2)")
     fig.add_vline(x=K, line_dash="dot", line_color="rgba(46,204,113,0.3)",
                   annotation_text=f"K={K:.0f}", annotation_position="top left",
@@ -502,7 +510,6 @@ def plot_payoff(S, K, premium_call, premium_put, option_type):
     fig.add_vline(x=S, line_dash="dot", line_color="rgba(232,232,232,0.2)",
                   annotation_text=f"S={S:.0f}", annotation_position="top right",
                   annotation_font=dict(size=10, color=COLORS["text"]))
-
     fig.update_layout(**PLOT_LAYOUT, title="Payoff & P&L at Expiration",
                       xaxis_title="Underlying Price at Expiry ($)",
                       yaxis_title="Profit / Loss ($)", height=450,
@@ -511,7 +518,7 @@ def plot_payoff(S, K, premium_call, premium_put, option_type):
     return fig
 
 
-def plot_greeks_sensitivity(S, K, T, r, sigma):
+def plot_greeks_sensitivity(S, K, T, r, sigma, q):
     s_range = np.linspace(S * 0.5, S * 1.5, 300)
     greek_names = ["Delta", "Gamma", "Theta", "Vega"]
     greek_colors_call = [COLORS["delta"], COLORS["gamma"], COLORS["theta"], COLORS["vega"]]
@@ -523,8 +530,8 @@ def plot_greeks_sensitivity(S, K, T, r, sigma):
         row = idx // 2 + 1
         col = idx % 2 + 1
 
-        call_vals = [greeks(s, K, T, r, sigma, "call")[greek_name] for s in s_range]
-        put_vals = [greeks(s, K, T, r, sigma, "put")[greek_name] for s in s_range]
+        call_vals = [greeks(s, K, T, r, sigma, "call", q)[greek_name] for s in s_range]
+        put_vals = [greeks(s, K, T, r, sigma, "put", q)[greek_name] for s in s_range]
 
         fig.add_trace(go.Scatter(x=s_range, y=call_vals, mode="lines",
                                  name=f"Call {greek_name}",
@@ -559,7 +566,7 @@ def plot_greeks_sensitivity(S, K, T, r, sigma):
     return fig
 
 
-def plot_greeks_vs_time(S, K, T, r, sigma):
+def plot_greeks_vs_time(S, K, T, r, sigma, q):
     t_range = np.linspace(0.01, T, 200)
     greek_names = ["Delta", "Gamma", "Theta", "Vega"]
     greek_colors = [COLORS["delta"], COLORS["gamma"], COLORS["theta"], COLORS["vega"]]
@@ -570,9 +577,7 @@ def plot_greeks_vs_time(S, K, T, r, sigma):
     for idx, greek_name in enumerate(greek_names):
         row = idx // 2 + 1
         col = idx % 2 + 1
-
-        call_vals = [greeks(S, K, t, r, sigma, "call")[greek_name] for t in t_range]
-
+        call_vals = [greeks(S, K, t, r, sigma, "call", q)[greek_name] for t in t_range]
         fig.add_trace(go.Scatter(x=(t_range * 365).astype(int), y=call_vals, mode="lines",
                                  name=greek_name,
                                  line=dict(color=greek_colors[idx], width=2),
@@ -608,7 +613,6 @@ def plot_iv_surface(iv_data):
                       thickness=10, len=0.6,
                       tickfont=dict(family="JetBrains Mono", size=9)),
     ))
-
     fig.update_layout(
         paper_bgcolor=COLORS["bg"], plot_bgcolor=COLORS["bg"],
         font=dict(color=COLORS["text"], size=11, family="DM Sans"),
@@ -630,7 +634,6 @@ def plot_iv_surface(iv_data):
 
 def plot_iv_heatmap(iv_data):
     strike_labels = [f"${s:.0f}" for s in iv_data["strikes"]]
-
     fig = go.Figure(data=go.Heatmap(
         x=strike_labels,
         y=iv_data["dte_labels"],
@@ -644,7 +647,6 @@ def plot_iv_heatmap(iv_data):
                       tickfont=dict(family="JetBrains Mono", size=10)),
         hovertemplate="Strike: %{x}<br>Expiry: %{y}<br>IV: %{text}%<extra></extra>",
     ))
-
     fig.update_layout(**PLOT_LAYOUT, title="Implied Volatility Heatmap",
                       xaxis_title="Strike", yaxis_title="Expiration",
                       height=max(350, len(iv_data["dte_labels"]) * 55 + 100))
@@ -652,17 +654,15 @@ def plot_iv_heatmap(iv_data):
     return fig
 
 
-def plot_option_price_vs_vol(S, K, T, r):
+def plot_option_price_vs_vol(S, K, T, r, q):
     vol_range = np.linspace(0.05, 1.0, 200)
-    call_prices = [bs_call(S, K, T, r, v) for v in vol_range]
-    put_prices = [bs_put(S, K, T, r, v) for v in vol_range]
-
+    call_prices = [bs_call(S, K, T, r, v, q) for v in vol_range]
+    put_prices = [bs_put(S, K, T, r, v, q) for v in vol_range]
     fig = go.Figure()
     fig.add_trace(go.Scatter(x=vol_range * 100, y=call_prices, mode="lines",
                              name="Call", line=dict(color=COLORS["call"], width=2.5)))
     fig.add_trace(go.Scatter(x=vol_range * 100, y=put_prices, mode="lines",
                              name="Put", line=dict(color=COLORS["put"], width=2.5)))
-
     fig.update_layout(**PLOT_LAYOUT, title="Option Price vs Implied Volatility",
                       xaxis_title="Volatility (%)", yaxis_title="Option Price ($)",
                       height=420,
@@ -689,6 +689,7 @@ if mode == "Manual":
     st.sidebar.markdown("### Market Conditions")
     sigma = st.sidebar.slider("Volatility (%)", min_value=1.0, max_value=150.0, value=25.0, step=0.5) / 100.0
     r = st.sidebar.slider("Risk-Free Rate (%)", min_value=0.0, max_value=15.0, value=5.0, step=0.25) / 100.0
+    q = st.sidebar.slider("Dividend Yield (%)", min_value=0.0, max_value=15.0, value=0.0, step=0.1) / 100.0
 
     ticker_for_iv = None
     spot_price = S
@@ -697,6 +698,11 @@ else:
     st.sidebar.markdown("### Ticker")
     ticker_input = st.sidebar.text_input("Enter ticker", value="AAPL").strip().upper()
     r = st.sidebar.slider("Risk-Free Rate (%)", min_value=0.0, max_value=15.0, value=5.0, step=0.25) / 100.0
+    override_div = st.sidebar.checkbox("Override dividend yield", value=False)
+    if override_div:
+        q = st.sidebar.slider("Dividend Yield (%)", min_value=0.0, max_value=15.0, value=0.0, step=0.1) / 100.0
+    else:
+        q = None  # will be auto-fetched from yfinance
     ticker_for_iv = ticker_input
 
 st.sidebar.markdown("### Display Options")
@@ -721,10 +727,10 @@ st.markdown("""
         <div class="dx-title-wrap">
             <div class="dx-title">
                 <span class="dx-title-plain">Derive</span><span class="dx-title-accent">xus</span>
-                <span class="dx-version">v1.0</span>
+                <span class="dx-version">v1.1</span>
             </div>
             <div class="dx-subtitle">
-                Black-Scholes pricing · Greeks visualization · Implied volatility surface
+                Black-Scholes-Merton pricing · Greeks visualization · Implied volatility surface
             </div>
         </div>
     </div>
@@ -739,13 +745,17 @@ if run_button or "dx_results" in st.session_state:
 
     if mode == "Market Data":
         with st.spinner("Fetching options data..."):
-            spot_price, expirations = fetch_options_chain(ticker_for_iv)
+            spot_price, expirations, fetched_q = fetch_options_chain(ticker_for_iv)
 
         if spot_price is None or expirations is None:
             st.error(f"Could not fetch data for **{ticker_for_iv}**. Check the ticker symbol.")
             st.stop()
 
         S = spot_price
+        # Use fetched dividend yield unless user has overridden
+        if q is None:
+            q = fetched_q
+
         selected_expiry = st.selectbox(
             "Select expiration for pricing analysis",
             options=expirations[:12],
@@ -761,31 +771,35 @@ if run_button or "dx_results" in st.session_state:
             K = float(calls_df.iloc[(calls_df["strike"] - S).abs().argsort().iloc[0]]["strike"])
             atm_call = calls_df[calls_df["strike"] == K].iloc[0]
             mid_price = (atm_call["bid"] + atm_call["ask"]) / 2 if atm_call["bid"] > 0 else atm_call["lastPrice"]
-            sigma = implied_vol(mid_price, S, K, T, r, "call")
+            sigma = implied_vol(mid_price, S, K, T, r, "call", q)
             if np.isnan(sigma):
                 sigma = 0.25
         else:
             K = S
             sigma = 0.25
 
-    call_price = bs_call(S, K, T, r, sigma)
-    put_price = bs_put(S, K, T, r, sigma)
-    call_greeks = greeks(S, K, T, r, sigma, "call")
-    put_greeks = greeks(S, K, T, r, sigma, "put")
+    # ══════════ COMPUTE ══════════
+    call_price = bs_call(S, K, T, r, sigma, q)
+    put_price = bs_put(S, K, T, r, sigma, q)
+    call_greeks = greeks(S, K, T, r, sigma, "call", q)
+    put_greeks = greeks(S, K, T, r, sigma, "put", q)
 
+    # Put-Call Parity with dividend: C − P = S·e^(−qT) − K·e^(−rT)
     parity_lhs = call_price - put_price
-    parity_rhs = S - K * np.exp(-r * T)
+    parity_rhs = S * np.exp(-q * T) - K * np.exp(-r * T)
     parity_diff = abs(parity_lhs - parity_rhs)
 
     st.session_state["dx_results"] = True
 
+    # ══════════ RESULTS ══════════
     st.markdown("## Option Pricing")
 
-    info_cols = st.columns(4)
+    info_cols = st.columns(5)
     info_cols[0].metric("Spot Price", f"${S:.2f}")
     info_cols[1].metric("Strike", f"${K:.2f}")
     info_cols[2].metric("DTE", f"{T_days}")
     info_cols[3].metric("Volatility", f"{sigma*100:.1f}%")
+    info_cols[4].metric("Div Yield", f"{q*100:.2f}%")
 
     st.markdown("---")
 
@@ -820,11 +834,11 @@ if run_button or "dx_results" in st.session_state:
     st.markdown("### Put-Call Parity Verification")
     parity_cols = st.columns(3)
     parity_cols[0].metric("C − P", f"${parity_lhs:.4f}")
-    parity_cols[1].metric("S − K·e⁻ʳᵀ", f"${parity_rhs:.4f}")
+    parity_cols[1].metric("S·e⁻ᵠᵀ − K·e⁻ʳᵀ", f"${parity_rhs:.4f}")
     parity_cols[2].metric("Deviation", f"${parity_diff:.6f}")
 
     if parity_diff < 0.01:
-        st.markdown("> Put-call parity holds — the deviation is negligible, confirming pricing consistency.")
+        st.markdown("> Put-call parity holds — the deviation is negligible, confirming pricing consistency under the generalized BSM model with continuous dividend yield.")
     else:
         st.markdown("> Put-call parity shows a deviation — this may indicate arbitrage opportunity or data lag.")
 
@@ -841,11 +855,11 @@ if run_button or "dx_results" in st.session_state:
     if show_greeks_sens:
         st.markdown("## Greeks Sensitivity")
         st.markdown("> How each Greek changes as the underlying price moves. "
-                    "**Delta** shows directional exposure — calls go from 0 to 1, puts from −1 to 0. "
+                    "**Delta** shows directional exposure — calls go from 0 to e⁻ᵠᵀ, puts from −e⁻ᵠᵀ to 0. "
                     "**Gamma** peaks at the strike (ATM), meaning Delta changes fastest there. "
                     "**Theta** shows daily time decay — deepest at ATM near expiration. "
                     "**Vega** shows volatility sensitivity — also highest ATM.")
-        st.plotly_chart(plot_greeks_sensitivity(S, K, T, r, sigma), use_container_width=True)
+        st.plotly_chart(plot_greeks_sensitivity(S, K, T, r, sigma, q), use_container_width=True)
         st.markdown("---")
 
     if show_greeks_time:
@@ -854,7 +868,7 @@ if run_button or "dx_results" in st.session_state:
                     "**Theta** accelerates sharply in the final days — the \"time decay cliff.\" "
                     "**Gamma** spikes near expiry for ATM options, making Delta highly unstable. "
                     "**Vega** drops as expiration nears — short-dated options are less sensitive to volatility shifts.")
-        st.plotly_chart(plot_greeks_vs_time(S, K, T, r, sigma), use_container_width=True)
+        st.plotly_chart(plot_greeks_vs_time(S, K, T, r, sigma, q), use_container_width=True)
         st.markdown("---")
 
     if show_price_vol:
@@ -862,7 +876,7 @@ if run_button or "dx_results" in st.session_state:
         st.markdown("> How option price changes with implied volatility (IV), holding all else constant. "
                     "Both calls and puts increase in value as IV rises — this is what Vega measures. "
                     "The relationship is roughly linear for ATM options and curves for deep ITM/OTM.")
-        st.plotly_chart(plot_option_price_vs_vol(S, K, T, r), use_container_width=True)
+        st.plotly_chart(plot_option_price_vs_vol(S, K, T, r, q), use_container_width=True)
         st.markdown("---")
 
     if show_iv_surface:
@@ -889,14 +903,12 @@ if run_button or "dx_results" in st.session_state:
 
                     if len(chain_data) >= 2:
                         strike_list = sorted(all_strikes)
-
                         if len(strike_list) > 20:
                             step = len(strike_list) // 20
                             strike_list = strike_list[::step]
 
                         dte_list = []
                         iv_matrix = []
-
                         for exp, df in chain_data.items():
                             dte = max((datetime.strptime(exp, "%Y-%m-%d") - datetime.today()).days, 1)
                             dte_list.append(dte)
@@ -907,7 +919,7 @@ if run_button or "dx_results" in st.session_state:
                                     mid = (match.iloc[0]["bid"] + match.iloc[0]["ask"]) / 2
                                     if mid <= 0:
                                         mid = match.iloc[0]["lastPrice"]
-                                    iv_val = implied_vol(mid, S, strike, dte / 365.0, r, "call")
+                                    iv_val = implied_vol(mid, S, strike, dte / 365.0, r, "call", q)
                                     row.append(iv_val if not np.isnan(iv_val) else None)
                                 else:
                                     row.append(None)
@@ -943,7 +955,6 @@ if run_button or "dx_results" in st.session_state:
             st.markdown("> Synthetic IV surface — switch to **Market Data** mode for real implied volatilities.")
             strike_range = np.linspace(K * 0.85, K * 1.15, 15)
             dte_range = np.array([7, 14, 30, 60, 90, 120, 180])
-
             iv_matrix = []
             for dte in dte_range:
                 row = []
@@ -953,7 +964,6 @@ if run_button or "dx_results" in st.session_state:
                     term = smile * (1 - 0.1 * np.log(dte / 30))
                     row.append(max(term, 0.05))
                 iv_matrix.append(row)
-
             iv_data = {
                 "strikes": strike_range,
                 "expirations": dte_range,
@@ -970,7 +980,6 @@ if run_button or "dx_results" in st.session_state:
         st.markdown("---")
 
     st.markdown("## Greeks Reference")
-
     greeks_ref = pd.DataFrame({
         "Greek": ["Delta (Δ)", "Gamma (Γ)", "Theta (Θ)", "Vega (ν)", "Rho (ρ)"],
         "Measures": [
@@ -980,14 +989,12 @@ if run_button or "dx_results" in st.session_state:
             "Rate of change of option price w.r.t. volatility (per 1%)",
             "Rate of change of option price w.r.t. interest rate (per 1%)",
         ],
-        "Call Range": ["0 to +1", "≥ 0", "≤ 0 (usually)", "≥ 0", "≥ 0"],
-        "Put Range": ["-1 to 0", "≥ 0", "≤ 0 (usually)", "≥ 0", "≤ 0"],
+        "Call Range": ["0 to +e⁻ᵠᵀ", "≥ 0", "≤ 0 (usually)", "≥ 0", "≥ 0"],
+        "Put Range": ["−e⁻ᵠᵀ to 0", "≥ 0", "≤ 0 (usually)", "≥ 0", "≤ 0"],
     }).set_index("Greek")
-
     st.dataframe(greeks_ref, use_container_width=True)
-
     st.markdown(
-        "> Delta approximates the probability of finishing in-the-money. "
+        "> Delta approximates the probability of finishing in-the-money (adjusted for dividend yield q). "
         "Gamma is highest for ATM options near expiration. "
         "Theta accelerates as expiration approaches — the \"time decay cliff.\""
     )
@@ -1000,8 +1007,8 @@ st.markdown("---")
 st.markdown("""
 <div class="dx-footer">
     Built by <a href="https://marinxhemollari.com" target="_blank">Marin Xhemollari</a> ·
-    Black-Scholes Pricing Model ·
+    Generalized Black-Scholes-Merton Pricing Model ·
     Options data via Yahoo Finance
-    <div class="dx-footer-mono">derivexus v1.0 · scipy.stats.norm · brentq solver · plotly.js</div>
+    <div class="dx-footer-mono">derivexus v1.1 · scipy.stats.norm · brentq solver · plotly.js</div>
 </div>
 """, unsafe_allow_html=True)
